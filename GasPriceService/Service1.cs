@@ -39,7 +39,7 @@ namespace GasPriceService
             return b;
         }
 
-	//will need to rewrite this if ethgasstation.info changes
+	//will need to rewrite this if ethgasstation.info changes its html
         void updateprice()
         {
 
