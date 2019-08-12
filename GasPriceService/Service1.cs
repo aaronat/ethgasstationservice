@@ -39,7 +39,20 @@ namespace GasPriceService
             return b;
         }
 
-	//will need to rewrite this if ethgasstation.info changes its html
+        string nowhitespace(string s)
+        {
+            string s1 = "";
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (((int)(s[i])) > 32)
+                {
+                    s1 += s[i];
+                }
+            }
+            return s1;
+        }
+
+        //will need to rewrite this if ethgasstation.info changes
         void updateprice()
         {
 
@@ -48,28 +61,19 @@ namespace GasPriceService
                 WebClient webclient1 = new WebClient();
                 string result = webclient1.DownloadString("https://ethgasstation.info/index.php");
                 string standard = result;
-                standard = getfromto(standard, "Standard (<5m)<strong></td>", "</html>");
-                standard = getfromto(standard, "#03586A", "</td>");
-                standard = standard.Replace("\"", "~");
-                standard = standard.Replace("#03586A~>", "");
-                standard = standard.Replace("#03586A~ >", "");
-                standard = standard.Replace("</td>", "");
+                standard = getfromtoexclusive(standard, "<div class=\"count standard\">", "</div>");
+                standard = nowhitespace(standard);
 
-                string safelow = result;
-                safelow = getfromto(safelow, "SafeLow (<30m)", "</html>");
-                safelow = getfromto(safelow, "#1ABB9C", "</td>");
-                safelow = safelow.Replace("\"", "~");
-                safelow = safelow.Replace("#1ABB9C~>", "");
-                safelow = safelow.Replace("#1ABB9C~ >", "");
-                safelow = safelow.Replace("</td>", "");
+
 
                 string fast = result;
-                fast = getfromto(fast, "Fast (<2m)", "</html>");
-                fast = getfromto(fast, "color:red", "</td>");
-                fast = fast.Replace("\"", "~");
-                fast = fast.Replace("color:red~>", "");
-                fast = fast.Replace("color:red~ >", "");
-                fast = fast.Replace("</td>", "");
+                fast = getfromtoexclusive(fast, "<div class=\"count fast\">", "</div>");
+                fast = nowhitespace(fast);
+
+
+                string safelow = result;
+                safelow = getfromtoexclusive(safelow, "<div class=\"count safe_low\" id=\"medTx\">", "</div>");
+                safelow = nowhitespace(safelow);
 
 
                 if (isDouble(standard) && (isDouble(safelow)) && (isDouble(fast)))
@@ -89,6 +93,7 @@ namespace GasPriceService
 
         void runsql(string sql, params object[] values)
         {
+
             string connectionstring = "your_connection_string";
             SqlConnection conn = new SqlConnection(connectionstring);
             conn.Open();
@@ -101,10 +106,12 @@ namespace GasPriceService
                 if (i % 2 == 1)
                 {
                     paramname = s.ToString();
+
                 }
                 if (i % 2 == 0)
                 {
                     cm.Parameters.AddWithValue(paramname, s);
+
                 }
             }
             cm.ExecuteNonQuery();
@@ -198,8 +205,43 @@ namespace GasPriceService
             return sb1;
         }
 
-        
-        
+
+
+        string getfromtoexclusive(string a, string b, string c)
+        {
+            string sa1 = "";
+            if (a.Length > 0)
+            {
+                if (a.IndexOf(b) > -1)
+                {
+                    if (a.Length >= a.IndexOf(b))
+                    {
+                        sa1 = Right(a, a.Length - a.IndexOf(b));
+                    }
+                }
+            }
+
+            string sb1 = sa1;
+            if (sb1.Length > 0)
+            {
+                if (sb1.IndexOf(c) > -1)
+                {
+                    if (sb1.IndexOf(c) + c.Length <= sb1.Length)
+                    {
+                        sb1 = Left(sb1, sb1.IndexOf(c) + c.Length);
+                    }
+                }
+            }
+
+            sb1 = sb1.Replace(b, "");
+            sb1 = sb1.Replace(c, "");
+            return sb1;
+        }
+
+
+
+
+
         protected override void OnStart(string[] args)
         {
             timer.Elapsed += new ElapsedEventHandler(OnElapsedTime);
